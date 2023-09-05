@@ -1,43 +1,48 @@
 import { Request } from "express";
+import { ApiError } from "../lib/apiError";
 
-const { AppError } = require('../lib/index');
-const multer = require('multer');
+import multer from 'multer';
+
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { cloudnairy: { cloud_name , api_key, api_secret } } = require('../config/index')
+const { cloudnairy } = require('../config/index')
+const maxFileSizeInBytes = 5 * 1024 * 1024; // 5MB
 
 // Configuration 
 
-cloudinary.config({
-  cloud_name,
-  api_key,
-  api_secret
-});
+cloudinary.config(cloudnairy);
 
 
 const storage = new CloudinaryStorage({
   cloudinary : cloudinary,
   params :     {
-    folder : 'user-images'
-    },
-    public_id : async (req:Request, file:any) => {
-      const myFileName = `${Date.now()}-${file.originalname.split('.')[0]}`;
+    folder : 'user-images',
+    public_id :  (req:Request, file: multer.File) => {
+      const { userName } = req.body
+      const myFileName = `${userName}-${Date.now()}-${file.originalname.split('.')[0]}`;
       return myFileName;
     },
+    },
+
     
 });
+const fileFilter = (req:Request, file : multer.File, callback: (error: ApiError | null, acceptFile: boolean) => void) => {   
 
+  if (file.mimetype.split("/")[0] !== "image") {
+      return callback(new ApiError('Only images are allowed', 400), null);
+    }
+  // if (!['png', 'jpg', 'jpeg'].includes(file.mimetype.split('/')[1])) {
+  //     return callback(new ApiError('Only images are allowed', 400), null);
+  //   }
+    return callback(null, true);  
+  }
 const upload = multer({
   storage,
   limits : {
-    fileSize : 1024 * 1024 * 0.5 * 10, // 5MB
+    fileSize : maxFileSizeInBytes, // 5MB
   },
-  fileFilter : function (req:Request, file:any, callback:any) {   
-      if (!['png', 'jpg', 'jpeg'].includes(file.mimetype.split('/')[1])) {
-        return callback(new AppError('Only images are allowed', 400), null);
-      }
-      return callback(null, true);
-    }
+
+  fileFilter 
   });
 
   const deleteImageByUrl = async (imageUrl) => {
