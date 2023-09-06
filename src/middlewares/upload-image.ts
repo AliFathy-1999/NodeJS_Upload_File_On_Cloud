@@ -18,8 +18,7 @@ const storage = new CloudinaryStorage({
   params :     {
     folder : 'user-images',
     public_id :  (req:Request, file: multer.File) => {
-      const { userName } = req.body
-      const myFileName = `${userName}-${Date.now()}-${file.originalname.split('.')[0]}`;
+      const myFileName = `${Date.now()}-${file.originalname.split('.')[0]}`;
       return myFileName;
     },
     },

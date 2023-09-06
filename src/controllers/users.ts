@@ -53,7 +53,7 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     const { params : { id }} = req;  
 
     const user = await User.findOne({_id:id});
-    if(pImage){
+    if(req.file){
         const imageUrl = user.pImage;
         removeImage(imageUrl) 
     }
