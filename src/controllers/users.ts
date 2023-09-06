@@ -1,10 +1,15 @@
 import { Request, Response , NextFunction } from "express";
-const User = require('../DB/models/users')
+
 import jwt from 'jsonwebtoken'
+import bcryptjs from "bcryptjs"; 
+
 import { IUser } from "../types/schemasType";
 import HttpStatusCode from "../types/http-status-code";
-import bcryptjs from "bcryptjs"; 
+
 const {ApiError} = require("../lib/index");
+const { removeImage } = require('../middlewares/upload-image')
+
+const User = require('../DB/models/users')
 
 const generateToken = (user:IUser)=>{
     const TOKEN_KEY = process.env.TOKEN_KEY as string
@@ -30,7 +35,7 @@ const signIn = async (req:Request,res:Response,next:NextFunction) => {
         const valid = bcryptjs.compareSync(password, user.password);
         if (!valid)
             throw new ApiError('Invalid Password', HttpStatusCode.UNAUTHORIZED);
-        res.status(HttpStatusCode.OK).json({status:'success', token: generateToken(user), user});        
+        res.status(HttpStatusCode.OK).json({status:'success', token: generateToken(user), data : user});        
 }
 const register = async (req: Request, res: Response, next: NextFunction) => {
         const pImage = req.file? req.file.path : undefined    
@@ -39,13 +44,51 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
         const user = await User.create({ firstName , lastName, userName , email, password , pImage })
         res.status(HttpStatusCode.CREATED).json({
             status: 'success',
-            user
+            data : user
         })
-    
+}
 
+const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+    const pImage = req.file? req.file.path : undefined;
+    const { params : { id }} = req;  
+
+    const user = await User.findOne({_id:id});
+    if(pImage){
+        const imageUrl = user.pImage;
+        removeImage(imageUrl) 
+    }
+    if(!user) throw new ApiError (`No User with ID ${id}`, HttpStatusCode.BAD_REQUEST);    
+    const { firstName , lastName } = req.body;
+    
+    const updatedUser = await User.findOneAndUpdate(
+        {_id:id},
+        { firstName , lastName , pImage },
+        {runValidation: true,new : true},
+        );
+    res.status(HttpStatusCode.OK).json({
+        status: 'success',
+        data : updatedUser
+    })
+}
+
+const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+    const { params : { id }} = req;  
+
+    const user = await User.findOne({_id:id});
+    if(!user) throw new ApiError (`No User with ID ${id}`, HttpStatusCode.BAD_REQUEST);
+
+    const imageUrl = user.pImage;
+    removeImage(imageUrl) 
+
+    await User.findOneAndDelete({_id:id});
+    res.status(HttpStatusCode.CREATED).json({
+        status: 'success',
+    })
 }
 
 export  {
     register,
     signIn,
+    updateUser,
+    deleteUser
 }

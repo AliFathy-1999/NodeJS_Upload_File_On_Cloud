@@ -7,7 +7,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { cloudnairy } = require('../config/index')
 const maxFileSizeInBytes = 5 * 1024 * 1024; // 5MB
-
+const { extractPublicId } = require('cloudinary-build-url')
 // Configuration 
 
 cloudinary.config(cloudnairy);
@@ -45,14 +45,11 @@ const upload = multer({
   fileFilter 
   });
 
-  const deleteImageByUrl = async (imageUrl) => {
-    const publicId = cloudinary.utils.extractPublicId(imageUrl);
-    cloudinary.uploader.destroy(publicId, function(err, result) { console.log(result) });
-  }
-const removeImage = async(url) =>{
+const removeImage = async(url:string) =>{
+  const publicId = extractPublicId(url);
   if(url === 'https://res.cloudinary.com/dttgbrris/image/upload/v1681003634/3899618_mkmx9b.png') return;
-  cloudinary.uploader.destroy(url, { resource_type : 'image'})
+  cloudinary.uploader.destroy(publicId, { resource_type : 'image'})
 }
 
 
-module.exports = { upload, removeImage, deleteImageByUrl};
+module.exports = { upload, removeImage};
